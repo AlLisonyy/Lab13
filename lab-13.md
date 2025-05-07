@@ -16,9 +16,11 @@ library(MASS)
 # Install and load the tidyverse package
 if (!require("tidyverse")) install.packages("tidyverse")
 library(tidyverse)
+
+library(psych)
 ```
 
-### Exercise 1
+### Exercise 1.0
 
 ``` r
 set.seed(123)
@@ -166,6 +168,289 @@ make sense.
 
 ### Exercise 3.1
 
+MISSING? I did not see where is 3.1!
+
 ### Exercise 3.2
 
+``` r
+# Define mean and covariance matrix
+mean_traits <- c(50, 50)
+cov_matrix <- matrix(c(100, 50, 50, 100), ncol = 2)
+
+# Generate correlated data
+set.seed(321)
+traits_data <- mvrnorm(n = 100, mu = mean_traits, Sigma = cov_matrix, empirical = FALSE)
+
+## Plot
+traits_df <- as.data.frame(traits_data)
+colnames(traits_df) <- c("Resilience", "Agreeableness")
+ggplot(traits_df, aes(x = Resilience, y = Agreeableness)) +
+  geom_point(color = "pink", alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE, color = "purple") +
+  labs(
+    title = "Scatter Plot of Resilience and Agreeableness",
+    x = "Resilience",
+    y = "Agreeableness"
+  )
+```
+
+    ## `geom_smooth()` using formula = 'y ~ x'
+
+![](lab-13_files/figure-gfm/Simulate%20resilience%20and%20agreeableness%20using%20mvrnorm-1.png)<!-- -->
+
 ### Exercise 3.3
+
+``` r
+#sample size:
+
+seed <- 125
+set.seed(seed)
+
+n_colonist <- 100
+#big five list
+bigfive <- c("EX", "ES", "AG", "CO", "OP")
+#M and SD, since they are going to be living on Mars, they might be having higher conscientiousness cores, lower neuroticism, and maybe slighly higher openness and agreeableness (to avoid potential conflicts with others during this process should be important). 
+means_bigfive <- c(EX = 50, ES = 80, AG = 60, CO = 75, OP = 55)
+sds_bigfive <- c(EX = 5, ES = 8, AG = 6, CO = 7, OP = 5)
+
+cor_matrix_bigfive <- matrix(
+  c(
+1.0000, 0.2599, 0.1972, 0.1860, 0.2949,
+0.2599, 1.0000, 0.1576, 0.2306, 0.0720,
+0.1972, 0.1576, 1.0000, 0.2866, 0.1951,
+0.1860, 0.2306, 0.2866, 1.0000, 0.1574,
+0.2949, 0.0720, 0.1951, 0.1574, 1.0000
+  ),
+  nrow = 5, ncol = 5, byrow = TRUE,
+  dimnames = list(
+c("EX", "ES", "AG", "CO", "OP"),
+c("EX", "ES", "AG", "CO", "OP")
+  )
+)
+
+cov_bigfive <- cor2cov(cor_matrix_bigfive, sds_bigfive)
+
+bigfive_data <- mvrnorm(n = 100, mu = means_bigfive, Sigma = cov_bigfive, empirical = FALSE)
+bigfive_df <- as.data.frame(bigfive_data)
+colnames(bigfive_df) <- c("EX", "ES", "AG", "CO", "OP")
+
+##This is the part I started to get confused, so I looked at your answers on the codes
+bigfive_data <- cbind.data.frame(
+  colonist_id = 1:n_colonist, # add colonist_id
+  seed = seed, # add seed
+  EX = bigfive_data[, 1],
+  ES = bigfive_data[, 2],
+  AG = bigfive_data[, 3],
+  CO = bigfive_data[, 4],
+  OP = bigfive_data[, 5]
+)
+
+# Print the first few rows of the simulated data
+
+print(head(bigfive_data))
+```
+
+    ##   colonist_id seed       EX       ES       AG       CO       OP
+    ## 1           1  125 44.90647 74.06157 55.46931 72.94450 53.89984
+    ## 2           2  125 53.44061 89.40120 56.88573 73.86868 45.02015
+    ## 3           3  125 46.24632 67.92057 61.27015 63.42956 49.47419
+    ## 4           4  125 54.20322 77.89340 64.08801 71.69692 55.78552
+    ## 5           5  125 46.13332 78.44097 54.51945 74.75379 57.98962
+    ## 6           6  125 55.30346 86.53307 80.63262 88.07891 56.37537
+
+``` r
+summary_stats_mean <- bigfive_data %>%
+  dplyr::select(-colonist_id, -seed) %>%
+  summarize(across(everything(), list(mean = mean))) %>%
+  rbind(means_bigfive) # compare with population parameters from mean_traits
+
+## This one just did not work for me, it kept saying: `.fns` must be a function, a formula, or a list of functions/formulas. for the across(). I decided not to include this one just for now. But I am wondering what has happened here...
+#summary_stats_sd <- bigfive_data %>%
+  #dplyr::select(-colonist_id, -seed) %>%
+  #summarize(across(everything(), list(sd = sd))) %>%
+  #rbind(sds_bigfive)
+
+# compare with population parameters from mean_traits and sd_traits
+#summary_stats <- cbind(summary_stats_mean, summary_stats_sd)
+
+#
+summary_stats_cor <- bigfive_data %>%
+  dplyr::select(-colonist_id, -seed) %>%
+  cor() # compare with population parameters from cor_matrix_bigfive
+
+summary_stats_mean
+```
+
+    ##    EX_mean  ES_mean  AG_mean  CO_mean  OP_mean
+    ## 1 49.34123 79.49591 60.39069 74.00914 55.14491
+    ## 2 50.00000 80.00000 60.00000 75.00000 55.00000
+
+### Exercise 4.1
+
+``` r
+n_colonies <- 100
+n_colonist <- 100
+trait_names <- c("EX", "ES", "AG", "CO", "OP")
+means_bigfive <- c(EX = 50, ES = 80, AG = 60, CO = 75, OP = 55)
+sds_bigfive <- c(EX = 5, ES = 5, AG = 5, CO = 5, OP = 5)
+
+cor_matrix_bigfive <- matrix(
+  c(
+    1.0000, 0.2599, 0.1972, 0.1860, 0.2949,
+    0.2599, 1.0000, 0.1576, 0.2306, 0.0720,
+    0.1972, 0.1576, 1.0000, 0.2866, 0.1951,
+    0.1860, 0.2306, 0.2866, 1.0000, 0.1574,
+    0.2949, 0.0720, 0.1951, 0.1574, 1.0000
+  ),
+  nrow = 5, byrow = TRUE,
+  dimnames = list(trait_names, trait_names)
+)
+
+cov_matrix_bigfive <- cor2cov(cor_matrix_bigfive, sds_bigfive)
+
+set.seed(1254)
+## Use replicate to generate colonist data for 100 colonies
+all_colonies <- replicate(n_colonies, {
+  bigfive_data <- mvrnorm(n = n_colonist, mu = means_bigfive, Sigma = cov_matrix_bigfive)
+  bigfive_df <- as.data.frame(bigfive_data)
+  colnames(bigfive_df) <- trait_names
+  bigfive_df
+}, simplify = FALSE)
+
+## Add colony ID and combine into one data frame
+colonies_df <- bind_rows(
+  lapply(1:n_colonies, function(i) {
+    all_colonies[[i]] %>%
+      mutate(colony_id = i, colonist_id = 1:n_colonist)
+  })
+)
+
+## mean, sd, and correlation for each colony
+colony_stats <- colonies_df %>%
+  group_by(colony_id) %>%
+  summarize(
+    EX_mean = mean(EX),
+    EX_sd = sd(EX),
+    EX_OP_cor = cor(EX, OP),
+    .groups = "drop"
+  )
+
+## View the result
+colony_stats
+```
+
+    ## # A tibble: 100 × 4
+    ##    colony_id EX_mean EX_sd EX_OP_cor
+    ##        <int>   <dbl> <dbl>     <dbl>
+    ##  1         1    49.9  4.83     0.235
+    ##  2         2    50.5  5.27     0.362
+    ##  3         3    50.4  4.86     0.308
+    ##  4         4    49.8  5.26     0.304
+    ##  5         5    50.5  4.59     0.229
+    ##  6         6    50.0  4.66     0.472
+    ##  7         7    49.8  4.25     0.426
+    ##  8         8    50.2  4.86     0.183
+    ##  9         9    50.1  5.01     0.226
+    ## 10        10    49.9  4.46     0.248
+    ## # ℹ 90 more rows
+
+``` r
+##plot
+ggplot(colony_stats, aes(x = EX_OP_cor)) +
+  geom_histogram(binwidth = 0.02, fill = "lightblue", color = "pink") +
+  labs(
+    title = "Distribution of EX–OP Correlation Across Colonies",
+    x = "EX–OP Correlation",
+    y = "Frequency"
+  )
+```
+
+![](lab-13_files/figure-gfm/100%20planets-1.png)<!-- --> based on the
+table, the correlations between extraversion and openness vary a little
+across the 100 planets, and mainly ranging from 0.08 to 0.5. It seems
+like most correlations centers on .29, which is the value we have set
+for. The relationships only seemed relatively consistent since this is a
+normal distribution, but there are correlations that is relatively far
+from .29. I think this sample size is pretty stable, but a larger one,
+such as 1000, can be more stable. I am not sure how to judge this so I
+just gave a rough number.
+
+### Exercise 4.2
+
+``` r
+## I asked GPT if there is an easier way to plot all the graph together and look at the data. This is the instructions. I think it looks pretty decent. 
+##install.packages("gridExtra") 
+library(gridExtra)
+```
+
+    ## 
+    ## Attaching package: 'gridExtra'
+
+    ## The following object is masked from 'package:dplyr':
+    ## 
+    ##     combine
+
+``` r
+library(ggplot2)
+# Population parameters
+pop_mean_ex <- 50
+pop_sd_ex <- 5
+pop_cor_ex_op <- 0.2949
+
+# Plot 1: EX Mean
+p1 <- ggplot(colony_stats, aes(x = EX_mean)) +
+  geom_histogram(binwidth = 0.25, fill = "skyblue", color = "white") +
+  geom_vline(xintercept = pop_mean_ex, linetype = "dashed", color = "red", size = 1) +
+  annotate("text", x = pop_mean_ex + 0.3, y = max(table(cut(colony_stats$EX_mean, breaks=30))), 
+           label = "Population Mean = 50", hjust = 0, color = "red") +
+  labs(title = "Distribution of Extraversion Means",
+       x = "Mean of Extraversion", y = "Count") +
+  theme_minimal()
+```
+
+    ## Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
+    ## ℹ Please use `linewidth` instead.
+    ## This warning is displayed once every 8 hours.
+    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+    ## generated.
+
+``` r
+# Plot 2: EX SD
+p2 <- ggplot(colony_stats, aes(x = EX_sd)) +
+  geom_histogram(binwidth = 0.1, fill = "lightgreen", color = "white") +
+  geom_vline(xintercept = pop_sd_ex, linetype = "dashed", color = "red", size = 1) +
+  annotate("text", x = pop_sd_ex + 0.2, y = max(table(cut(colony_stats$EX_sd, breaks=30))), 
+           label = "Population SD = 5", hjust = 0, color = "red") +
+  labs(title = "Distribution of Extraversion SDs",
+       x = "Standard Deviation of Extraversion", y = "Count") +
+  theme_minimal()
+
+# Plot 3: Corr(EX, OP)
+p3 <- ggplot(colony_stats, aes(x = EX_OP_cor)) +
+  geom_histogram(binwidth = 0.02, fill = "lightcoral", color = "white") +
+  geom_vline(xintercept = pop_cor_ex_op, linetype = "dashed", color = "red", size = 1) +
+  annotate("text", x = pop_cor_ex_op + 0.02, y = max(table(cut(colony_stats$EX_OP_cor, breaks=30))), 
+           label = "Population r = 0.29", hjust = 0, color = "red") +
+  labs(title = "Distribution of EX–OP Correlations",
+       x = "Correlation Between EX and OP", y = "Count") +
+  theme_minimal()
+
+# Arrange plots side-by-side
+grid.arrange(p1, p2, p3, ncol = 1)
+```
+
+![](lab-13_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+
+### Overall
+
+In general, I also really enjoyed this lab, especially exercise 4 when
+we would replicate for 100 planets. I think it is really useful when we
+are trying to learn and understand simulation. I think for 4.2., we can
+add some questions to promote a deeper thinking about the graph, such
+as: What does these graphs tell you about the reliability of trait
+estimates drawn from a single population? I am not sure if this question
+fits the purpose of this lab, but I think adding an interpretation
+question would be interesting. For Exercise 4.1., I think we can also
+plot two graphs with one n= 50 and one n = 1000 to answer your question
+of: How large of a sample size would you need to get a stable estimate
+of the correlation between extraversion and openness?
